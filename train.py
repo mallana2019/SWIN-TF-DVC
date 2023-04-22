@@ -1,11 +1,12 @@
+
 import time
 import copy
 import os
+import pandas as pd
+
 from pathlib import Path
 from PIL import Image
 import argparse
-
-import pandas as pd
 import numpy as np
 from sklearn.metrics import confusion_matrix
 
@@ -30,8 +31,8 @@ plt.style.use("ggplot")
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', '--epochs', type=int, default=10,
     help='number of epochs to train our network for')
-parser.add_argument('-b', '--batch', type=int, default=16,
-    help='number of training examples in a batch')
+parser.add_argument('-b', '--batch', type=int, default=4,
+    help='number of training examples to be considered as a  batch')
 args = vars(parser.parse_args())
 
 epochs = args['epochs']
@@ -63,36 +64,30 @@ dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=batc
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'test']}
 class_names = image_datasets['train'].classes
 
-print("\ntraining images :",dataset_sizes['train'])
-print("test images : ",dataset_sizes['test'])
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-print(f'Training on {torch.cuda.get_device_name()} \n')
 
-####fine tuning suffeleNet#################
 
-suffleNet =  models.shufflenet_v2_x0_5(weights=models.ShuffleNet_V2_X0_5_Weights.IMAGENET1K_V1)
+####fine tuning Swin Transformer#################
+
+resnet =  models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
 
 
 num_classes = 2
-for param in suffleNet.parameters():
-    param.requires_grad = False
-for param in suffleNet.conv5.parameters():
-    param.requires_grad = True
+for param in resnet.parameters():
+        param.requires_grad=False
 
-in_features = suffleNet.fc.in_features
-suffleNet.fc = nn.Sequential(nn.Linear(in_features=1024, out_features=64, bias=True),
-                             nn.Dropout(0.4,inplace=False),
-                             nn.Linear(64,num_classes)
-                            )
+    #Training the last fc layer
+in_features =  resnet.fc.in_features
+resnet.fc = nn.Linear(in_features,num_classes)
+            
 '''
-for param in suffleNet.parameters():
+for param in swin_t.parameters():
     if param.requires_grad == True :
         print(param.shape)
 '''    
 
 
-model = suffleNet.to(device)
+model = resnet.to(device)
 loss_fn = nn.CrossEntropyLoss()
 opt = optim.AdamW(model.parameters(), lr=0.001,weight_decay=0.01)
 exp_lr_scheduler = lr_scheduler.StepLR(opt, step_size=7, gamma=0.1)
@@ -170,7 +165,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs):
         print()
 
     time_elapsed = time.time() - since
-    print(f'Training completed in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
+    print(f'Training complete in {time_elapsed // 60:.0f}m {time_elapsed % 60:.0f}s')
     with open("metrics.txt", "w") as outfile:
         outfile.write("Accuracy: " + str(round(best_acc.item(),3)) + "\n")
 
