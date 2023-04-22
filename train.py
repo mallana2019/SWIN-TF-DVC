@@ -69,7 +69,7 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 ####fine tuning Swin Transformer#################
 
-resnet =  models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
+resnet =  models.resnet18(weights=models.ResNet18_Weights.IMAGENET1K_V1)
 
 
 num_classes = 2
@@ -81,7 +81,7 @@ in_features =  resnet.fc.in_features
 resnet.fc = nn.Linear(in_features,num_classes)
             
 '''
-for param in swin_t.parameters():
+for param in resnet.parameters():
     if param.requires_grad == True :
         print(param.shape)
 '''    
